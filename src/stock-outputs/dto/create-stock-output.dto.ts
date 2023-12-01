@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer';
 import { IsNotEmpty, IsPositive, IsInt, IsDate } from 'class-validator';
 
-export class CreateStockInputDto {
+export class CreateStockOutputDto {
   @IsPositive()
   @IsInt()
   @IsNotEmpty()

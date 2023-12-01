@@ -1,35 +1,42 @@
 import { Injectable } from '@nestjs/common';
-import { CreateStockInputDto } from './dto/create-stock-input.dto';
+import { CreateStockOutputDto } from './dto/create-stock-output.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NotFoundError } from 'src/errors';
 
 @Injectable()
-export class StockInputsService {
+export class StockOutputsService {
   constructor(private prismaService: PrismaService) {}
 
-  async create(createStockInputDto: CreateStockInputDto) {
+  async create(createStockOutputDto: CreateStockOutputDto) {
     const product = await this.prismaService.stockInput.findUnique({
-      where: { id: createStockInputDto.productId },
+      where: { id: createStockOutputDto.productId },
     });
-    console.log(product);
 
     if (!product) {
       throw new NotFoundError('Product not found');
     }
 
+    if (product.quantity <= 0) {
+      throw Error('Product Out of Stock');
+    }
+
+    if (createStockOutputDto.quantity > product.quantity) {
+      throw Error('Insufficient stock quantity');
+    }
+
     const result = await this.prismaService.$transaction([
       this.prismaService.stockInput.create({
         data: {
-          productId: createStockInputDto.productId,
-          quantity: createStockInputDto.quantity,
-          date: createStockInputDto.date,
+          productId: createStockOutputDto.productId,
+          quantity: createStockOutputDto.quantity,
+          date: createStockOutputDto.date,
         },
       }),
       this.prismaService.product.update({
-        where: { id: createStockInputDto.productId },
+        where: { id: createStockOutputDto.productId },
         data: {
           quantity: {
-            increment: createStockInputDto.quantity,
+            decrement: createStockOutputDto.quantity,
           },
         },
       }),
@@ -39,12 +46,12 @@ export class StockInputsService {
   }
 
   findAll() {
-    return this.prismaService.stockInput.findMany();
+    return this.prismaService.stockOutput.findMany();
   }
 
   async findOne(id: number) {
     try {
-      return await this.prismaService.stockInput.findUniqueOrThrow({
+      return await this.prismaService.stockOutput.findUniqueOrThrow({
         where: { id },
       });
     } catch (error) {
